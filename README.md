@@ -1,16 +1,26 @@
-### Hi there 👋
+The source code of V-Cloak.
 
-<!--
-**V-Cloak/V-Cloak** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
-
-Here are some ideas to get you started:
-
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+- Datasets
+	+ README.md
+	+ Put the training set here, e.g., voxceleb1.
+- ECAPA
+	+ README.md
+	+ Download the ECAPA-TDNN here.
+- deepspeech4loss.py
+	+ Compute the ASR loss (CTC, GPG).
+- ecapa_tdnn_test.py
+	+ tools of ECAPA-TDNN
+- masker.py
+	+ Compute the psychoacoustic-based loss.
+- model
+	+ The anonymizer of V-Cloak.
+- new_pytorch_deep_speech.py
+	+ A modified DeepSpeech model to allow torch.DataParallel.
+- train.py
+	+ Train the anonymizer.
+- trainingDataset.py
+	+ Data preparation
+- validation.py
+	+ Generate anonymized audios.
+- requirements.txt
+- test.wav
