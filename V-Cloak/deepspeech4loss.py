@@ -180,10 +180,15 @@ class DeepSpeech4Loss(PyTorchDeepSpeech):
         outputs = self.compute_ppg(x)
         ppg_loss = self.ppg_criterion(outputs, ppg)
 
+        if torch.isnan(outputs).any():
+            print('Warning: output ppg has NaN values')
+        if torch.isnan(ppg).any():
+            print('Warning: groundtruth ppg has NaN values')
+
         return ppg_loss
 
 if __name__=='__main__':
-    wav,sr = torchaudio.load('/home/zhengke/Cyclegan-VC2/data/6930/81414/6930-81414-0000.flac')
+    wav,sr = torchaudio.load('./test.wav')
     # wav = wav*2**15
     wav = wav.to('cuda')
     wav.requires_grad=True

@@ -22,11 +22,11 @@ def SNR_max(signal, noise):
     A1 = torch.max(torch.abs(signal))
     A2 = torch.max(torch.abs(noise))
 
-    print("A1: {}, A2: {}".format(A1, A2))
+    # print("A1: {}, A2: {}".format(A1, A2))
 
     return 20*torch.log10(A1/A2)
 
-def validation(validation_path='./data/6930',
+def validation(validation_path='./Datasets/dev-clean',
                generator = None,
                target_model = None,
                device=None,
@@ -35,7 +35,8 @@ def validation(validation_path='./data/6930',
                normalize = True,
                threshold = 0.267,
                M = 41641,
-               N = 32089):
+               N = 32089,
+               save=False):
     # Set up validation parameters
     if output_path_root is None:
         output_path_root = './converted_sound_tmp_({})'\
@@ -43,71 +44,85 @@ def validation(validation_path='./data/6930',
                                     time.localtime()))
     # Setting up root dataset path and save path
     root_path = os.path.basename(validation_path)
-    output_dir = os.path.join(output_path_root, root_path)
+    output_dir_converted = os.path.join(output_path_root, root_path)
     # output_dir_original = output_dir + '_original'
-    output_dir_converted = output_dir #+ '_converted'
+    # output_dir_converted = output_dir #+ '_converted'
 
     all_scores = []
     all_SNR1 = []
     all_SNR2 = []
     print("Generating Adversarial Examples from {}...".format(root_path))
+
+    generator.eval()
     with torch.no_grad():
-        for speaker in os.listdir(validation_path):
+        for filepath in glob.glob(validation_path + "/*/*/*.flac"):
+        # for speaker in os.listdir(validation_path):
             # Setting up sub dataset path and save path
-            validation_dir = os.path.join(validation_path, speaker)
+            # validation_dir = os.path.join(validation_path, speaker)
             # output_dir_original_speaker =os.path.join(output_dir_original,speaker)
-            output_dir_converted_speaker = os.path.join(output_dir_converted,speaker)
+            # output_dir_converted_speaker = os.path.join(output_dir_converted,speaker)
 
-            os.makedirs(output_dir_converted_speaker,exist_ok=True)
+            output_subdir = os.path.join(*os.path.dirname(filepath).split('/')[-2:])
+            output_path = os.path.join(output_dir_converted, output_subdir)
+            if save:
+                os.makedirs(output_path, exist_ok=True)
 
-            for filepath in glob.glob(validation_dir + "/*.flac"):
-                waveform, sample_rate = torchaudio.load(filepath)
+            # for filepath in glob.glob(validation_dir + "/*/*.flac"):
+            waveform, sample_rate = torchaudio.load(filepath)
 
-                if normalize:
-                    waveform = (waveform/waveform.abs().max()).to(device)
-                else:
-                    waveform = (waveform).to(device)
-                    print("false")
+            MAX = waveform.abs().max()
+            if normalize and MAX != 0:
+                waveform = (waveform/MAX).to(device)
+            else:
+                waveform = (waveform).to(device)
+                # print("normalization off")
 
-                pad = (M-N)//2
-                n_segment = waveform.size(-1) // N + 1
+            pad = (M-N)//2
+            n_segment = waveform.size(-1) // N + 1
 
-                waveform_pad= torch.nn.functional.pad(waveform,
-                                (pad,N*n_segment+pad-waveform.size(-1)),
-                                "constant", 0).to(device)
-                adv_delta = []
-                for i in range(n_segment):
-                    waveform_segment = waveform_pad[:,i*N:i*N+M]
-                    waveform_segment2 = waveform_segment[:, pad:-pad]
-                    adv_audio1 = generator((waveform_segment.unsqueeze(0), eps+torch.zeros(1,1)))['perturb'].squeeze(0)
-                    adv_perturb1 = torch.clamp(adv_audio1-waveform_segment2, min=-eps, max=eps)
-                    adv_perturb = torch.clamp(adv_perturb1+waveform_segment2, min=-1, max=1)-waveform_segment2
+            waveform_pad= torch.nn.functional.pad(waveform,
+                            (pad,N*n_segment+pad-waveform.size(-1)),
+                            "constant", 0).to(device)
+            adv_delta = []
+            for i in range(n_segment):
+                waveform_segment = waveform_pad[:,i*N:i*N+M]
+                waveform_segment2 = waveform_segment[:, pad:-pad]
+                adv_audio1 = generator((waveform_segment.unsqueeze(0), eps+torch.zeros(1,1)))['perturb'].squeeze(0)
+                adv_perturb1 = torch.clamp(adv_audio1-waveform_segment2, min=-eps, max=eps)
+                adv_perturb = torch.clamp(adv_perturb1+waveform_segment2, min=-1, max=1)-waveform_segment2
 
-                    adv_delta.append(adv_perturb)
+                adv_delta.append(adv_perturb)
 
-                adv_delta = torch.hstack(adv_delta)[:,:waveform.size(-1)]
-                adv_audio = adv_delta + waveform
-                SNR1 = SNR_energy(waveform, adv_delta).item()
-                SNR2 = SNR_max(waveform, adv_delta).item()
-                all_SNR1.append(SNR1)
-                all_SNR2.append(SNR2)
+            adv_delta = torch.hstack(adv_delta)[:,:waveform.size(-1)]
+            adv_audio = adv_delta + waveform
+            # SNR1 = SNR_energy(waveform, adv_delta).item()
+            # SNR2 = SNR_max(waveform, adv_delta).item()
+            # all_SNR1.append(SNR1)
+            # all_SNR2.append(SNR2)
 
-                if target_model is not None:
-                    adv_embedding = target_model.classifier.encode_batch(adv_audio)
-                    real_embedding = target_model.classifier.encode_batch(waveform)
-                    loss_adv = target_model.cosine_score(adv_embedding, real_embedding)
-                    all_scores.append(loss_adv.item())
+            adv_embedding = target_model.classifier.encode_batch(adv_audio)
+            real_embedding = target_model.classifier.encode_batch(waveform)
+                
+            SNR1 = SNR_energy(waveform, adv_delta).item()
+            SNR2 = SNR_max(waveform, adv_delta).item()
+            all_SNR1.append(SNR1)
+            all_SNR2.append(SNR2)
+            
+            loss_adv = target_model.cosine_score(adv_embedding, real_embedding)
+            all_scores.append(loss_adv.item())
 
-                    print("{},\tscore: {:.4f},\tnorm: {:.2f},\tSNR1: {:.2f},\tSNR2: {:.2f},\tsize: {}"\
-                        .format(os.path.basename(filepath), 
-                                loss_adv.item(), 
-                                torch.norm(adv_delta, 2).item(), 
-                                SNR1,
-                                SNR2,
-                                list(adv_audio.size())))
-                adv_audio = adv_audio.cpu()
-                torchaudio.save(filepath=os.path.join(output_dir_converted_speaker, os.path.basename(filepath)),
-                         src=adv_audio,sample_rate=16000)
+            print("{},\tscore: {:.4f},\tnorm: {:.2f},\tSNR1: {:.2f},\tSNR2: {:.2f},\tsize: {}"\
+                .format(os.path.basename(filepath), 
+                        loss_adv.item(), 
+                        torch.norm(adv_delta, 2).item(), 
+                        SNR1,
+                        SNR2,
+                        list(adv_audio.size())))
+            adv_audio = adv_audio.cpu()
+
+            if save:
+                torchaudio.save(filepath=os.path.join(output_path, os.path.basename(filepath)),
+                            src=adv_audio,sample_rate=16000)
         # threshold = 0.5
         results = ("Stats: ASR: {:.2f}%(thres: {:.3f}),\tscore:{:.2f}-{:.2f}({:.2f}),\tSNR(E):{:.2f}-{:.2f}dB,\tSNR(MAX):{:.2f}-{:.2f}dB"\
                 .format(100*np.sum(np.array(all_scores)<threshold)/len(all_scores), 
@@ -124,7 +139,7 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--validation_path', default='./data/6930',help="validation dataset path")
     parser.add_argument('--output_root_path', default='./converted_sound_Waveunet_test',help="path to store the validation output")
-    parser.add_argument('--checkpoint', default='./model_checkpoint/_CycleGAN_Checkpoint',help="model checkpoint on which validation is done")
+    parser.add_argument('--checkpoint', default='./model_checkpoint/_VCloak_Checkpoint',help="model checkpoint on which validation is done")
     parser.add_argument('--eps', type=float, default=0.1, help="max amplitude of the adversarial noise")
     parser.add_argument('--normalize', type=bool, default=False, help="normalize or not")
     parser.add_argument('--threshold', type=float, default=0.267, help="threshold of ecapa")
@@ -166,9 +181,9 @@ if __name__=='__main__':
     generator.load_state_dict(checkpoint['model_waveunet'])
 
     # target attack model
-    model_src = './CKPT+2021-02-27+12-48-32+00'
+    model_src = './ECAPA'
     hparams_src = 'hyperparams.yaml'
-    savedir = './CKPT+2021-02-27+12-48-32+00'
+    savedir = './ECAPA'
     target_model = ecapa_tndnn(model_src=model_src, 
                                 hparams_src=hparams_src, 
                                 savedir=savedir, 
@@ -183,4 +198,5 @@ if __name__=='__main__':
                 output_path_root=args.output_root_path,
                 eps = args.eps,
                 normalize = args.normalize,
-                threshold = args.threshold)
+                threshold = args.threshold,
+                save = True)

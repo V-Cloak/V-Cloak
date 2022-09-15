@@ -1,6 +1,7 @@
 
 from torch.utils.data.dataset import Dataset
 import torch
+from torch.nn import functional as F
 import numpy as np
 import torchaudio
 
@@ -49,14 +50,20 @@ class trainingDataset(Dataset):
         waveform, sample_rate = torchaudio.load(wav_filename)
 
         n_total = waveform.size(-1)
-        assert n_total >= self.N
-        start_idx = np.random.randint(n_total - self.N + 1)
-        end_idx = start_idx + self.N
-        waveform = waveform[:, start_idx: end_idx]
-        waveform = waveform/waveform.abs().max()
-        waveform *= torch.clamp(self.mean+self.sigma*torch.randn(1), 
-                                min=0.1, max=1)
+        if n_total >= self.N:
+            start_idx = np.random.randint(n_total - self.N + 1)
+            end_idx = start_idx + self.N
+            waveform = waveform[:, start_idx : end_idx]
+        else:
+            waveform = F.pad(waveform, ((self.N-n_total)//2+1, (self.N-n_total)//2+1), "constant", 0)
+            waveform = waveform[:, : self.N]
 
+        MAX = waveform.abs().max()
+        if MAX != 0:
+            waveform = waveform/MAX
+        waveform *= torch.clamp(self.mean+self.sigma*torch.randn(1), 
+                    min=0.1, max=1)
+        waveform = torch.clamp(waveform, min=-1, max=1)
         return waveform
 
     def __len__(self):
