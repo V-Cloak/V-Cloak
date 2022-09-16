@@ -69,6 +69,52 @@ for filepath in glob.glob(validation_path + "/*/*/*.flac")
 ```
 
 # Code structure
+
+```shell
+.
+|-- Datasets
+|   |-- dev-clean
+|   |-- test-clean
+|   |-- train-clean-100
+|   `-- train-other-500
+|-- ECAPA
+|   |-- CKPT.yaml
+|   |-- brain.ckpt
+|   |-- classifier.ckpt
+|   |-- counter.ckpt
+|   |-- custom.py -> xxxx
+|   |-- dataloader-TRAIN.ckpt
+|   |-- embedding_model.ckpt
+|   |-- hyperparams.yaml
+|   |-- label_encoder.ckpt
+|   |-- label_encoder.txt
+|   |-- mean_var_norm_emb.ckpt
+|   |-- normalizer.ckpt
+|   `-- optimizer.ckpt
+|-- XVECTOR
+|   |-- classifier.ckpt
+|   |-- custom.py -> xxxx
+|   |-- embedding_model.ckpt
+|   |-- hyperparams.yaml
+|   |-- label_encoder.ckpt
+|   `-- mean_var_norm_emb.ckpt
+|-- deepspeech4loss.py
+|-- ecapa_tdnn_test.py
+|-- masker.py
+|-- model
+|   |-- conv.py
+|   |-- crop.py
+|   |-- resample.py
+|   |-- utils.py
+|   `-- waveunet.py
+|-- model_checkpoint_GPU
+|-- new_pytorch_deep_speech.py
+|-- requirements.txt
+|-- train.py
+|-- trainingDataset.py
+`-- validation.py
+```
+
 - Datasets
 	+ README.md
 	+ Put the training set here, e.g., voxceleb1.
