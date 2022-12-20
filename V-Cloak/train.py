@@ -356,21 +356,21 @@ class VCloakTraining(object):
                 perturb_loss_lambda = 0.1
 
                 # ASV term
-                adv_loss_lambda = 20*1.5
+                adv_loss_lambda = 20
 
                 if score < 0.15:
                     # discriminator term
-                    G_loss_lambda = 100e-8 # 100e-6
+                    G_loss_lambda = 100e-6 # 100e-8 # 100e-6
 
                     # ASR term
                     asr_loss_lambda = 1
 
                 elif score < 0.3:
-                    G_loss_lambda = 70e-8 # 70e-6
+                    G_loss_lambda = 70e-6 # 70e-8 # 70e-6
                     asr_loss_lambda = 0.8
 
                 else:
-                    G_loss_lambda = 10e-8 # 1e-6
+                    G_loss_lambda = 1e-6 # 10e-8 # 1e-6
                     asr_loss_lambda = 0.5
             
                 assert not torch.isnan(loss_G_fake), "loss_G_fake is NaN"

@@ -40,6 +40,8 @@ To train V-Cloak from scratch,
 python train.py
 ```
 
+*P.S. the weights of the loss terms should be tuned carefully if the imperceptible psychoacoustic loss term is included, i.e., `G_loss_lambda` in the training code, since the dynamic range of this term is large. Or you can set it to zero to train a model without the psychoacoustic loss.*
+
 To load the newest checkpoint,
 
 ```shell
