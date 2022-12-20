@@ -141,3 +141,10 @@ for filepath in glob.glob(validation_path + "/*/*/*.flac")
 	+ Generate anonymized audios.
 - requirements.txt
 - test.wav
+
+
+# TODO
+
+- [ ] tidy the code
+- [ ] test different model hyperparameters
+- [ ] release the pretrain model
